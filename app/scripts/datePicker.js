@@ -24,8 +24,14 @@ Module.constant('datePickerConfig', {
 //Moment format filter.
 Module.filter('mFormat', function () {
   return function (m, format, tz) {
+    if (m === null) {
+      return '';
+    }
     if (!(moment.isMoment(m))) {
       return moment(m).format(format);
+    }
+    if (!moment(m).isValid()) {
+      return '';
     }
     return tz ? moment.tz(m, tz).format(format) : m.format(format);
   };
