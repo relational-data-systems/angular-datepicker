@@ -85,11 +85,27 @@ Module.directive('dateTime', ['$compile', '$document', '$filter', 'dateTimeConfi
         if (!viewValue) {
           return '';
         }
-        var parsed = moment(viewValue, format);
+        var parsed = moment(viewValue, format, true);
         if (parsed.isValid()) {
+          if(scope.dateCtrl) {
+            scope.dateCtrl.setValidity('dateFormat', true);
+          } 
           return parsed;
         }
+        if(scope.dateCtrl) {
+            scope.dateCtrl.setValidity('dateFormat', false);
+        } 
       }
+      
+      ngModel.$validators.dateFormat = function(modelValue, viewValue) {
+        
+        var viewValueMoment = moment(viewValue, format, true);
+        
+        if(scope.dateCtrl) {
+            scope.dateCtrl.setValidity('dateFormat', !viewValue || viewValueMoment.isValid());
+        } 
+        return true;
+      };
 
       function setMin(date) {
         minDate = date;
@@ -110,8 +126,12 @@ Module.directive('dateTime', ['$compile', '$document', '$filter', 'dateTimeConfi
         setMin(datePickerUtils.findParam(scope, attrs.minDate));
 
         ngModel.$validators.min = function (value) {
-          //If we don't have a min / max value, then any value is valid.
-          return minValid ? moment.isMoment(value) && (minDate.isSame(value) || minDate.isBefore(value)) : true;
+          //If we don't have a min / max value, then any value is valid.          
+          var valid = minValid ? moment.isMoment(value) && (minDate.isSame(value) || minDate.isBefore(value)) : true;
+          if(minValid && value && scope.dateCtrl) {
+            scope.dateCtrl.setValidity('dateMin', valid);
+          }          
+          return true;
         };
       }
 
@@ -119,7 +139,11 @@ Module.directive('dateTime', ['$compile', '$document', '$filter', 'dateTimeConfi
         setMax(datePickerUtils.findParam(scope, attrs.maxDate));
 
         ngModel.$validators.max = function (value) {
-          return maxValid ? moment.isMoment(value) && (maxDate.isSame(value) || maxDate.isAfter(value)) : true;
+          var valid = maxValid ? moment.isMoment(value) && (maxDate.isSame(value) || maxDate.isAfter(value)) : true;
+          if(maxValid && value && scope.dateCtrl) {
+            scope.dateCtrl.setValidity('dateMax', valid);
+          }
+          return true;
         };
       }
 
@@ -205,12 +229,12 @@ Module.directive('dateTime', ['$compile', '$document', '$filter', 'dateTimeConfi
 
         //If the picker has already been shown before then we shouldn't be binding to events, as these events are already bound to in this scope.
         if (!shownOnce) {
-          scope.$on('setDate', function (event, date, view) {
+          scope.$on('setDate', function (event, date) {
             updateInput(event);
             if (dateChange) {
               dateChange(attrs.ngModel, date);
             }
-            if (dismiss && views[views.length - 1] === view) {
+            if (dismiss) {
               clear();
             }
           });
